@@ -15,6 +15,9 @@ class _PongState extends State<Pong> with SingleTickerProviderStateMixin {
   double batWidth = 0;
   double batHeight = 0;
   double batPosition = 0;
+  double increment = 5;
+
+  Ball ball = Ball();
 
   Animation<double> animation;
   AnimationController controller;
@@ -24,20 +27,27 @@ class _PongState extends State<Pong> with SingleTickerProviderStateMixin {
     posX = 0;
     posY = 0;
     controller = AnimationController(
-      duration: Duration(seconds: 3),
+      duration: Duration(minutes: 10000),
       vsync: this,
     );
     animation = Tween<double>(begin: 0, end: 100).animate(controller);
     animation.addListener(() {
-      setState(() {
-        posX ++;
-        posY --;
+      safeSetState(() {
+        (hDir == Direction.right) ? posX += increment : posX -= increment;
+        (vDir == Direction.down) ? posY += increment : posY -= increment;
       });
+      checkBorders();
     });
 
     controller.forward();
 
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
   }
 
   @override
@@ -52,16 +62,59 @@ class _PongState extends State<Pong> with SingleTickerProviderStateMixin {
         return Stack(
           children: <Widget>[
             Positioned(
-              child: Ball(),
-              left: posX, top: posY,
+              child: ball,
+              left: posX,
+              top: posY,
             ),
             Positioned(
-              child: Bat(batWidth, batHeight),
-              bottom: 0,
-            ),
+                left: batPosition,
+                bottom: 0,
+                child: GestureDetector(
+                  onHorizontalDragUpdate: moveBat,
+                  child: Bat(batWidth, batHeight),
+                )),
           ],
         );
       },
     );
   }
+
+  void moveBat(DragUpdateDetails update) {
+    safeSetState(() {
+      batPosition += update.delta.dx;
+    });
+  }
+
+  // Pong Logic
+  Direction vDir = Direction.down;
+  Direction hDir = Direction.right;
+
+  void checkBorders() {
+    if (posX <= 0 && hDir == Direction.left) {
+      hDir = Direction.right;
+    }
+    if (width != null && posX >= width - ball.diameter && hDir == Direction.right) {
+      hDir = Direction.left;
+    }
+    if (height != null && posY >= height - ball.diameter - batHeight && vDir == Direction.down) {
+      // check if bat is under the ball
+      if (posX >= (batPosition - ball.diameter) && posX <= (batPosition + batWidth + ball.diameter)) {
+        vDir = Direction.up;
+      } else {
+        controller.stop();
+        dispose();
+      }
+    }
+    if (posY <= 0 && vDir == Direction.up) {
+      vDir = Direction.down;
+    }
+  }
+
+  void safeSetState(Function function) {
+    if (mounted && controller.isAnimating) {
+      setState(function);
+    }
+  }
 }
+
+enum Direction { up, down, left, right }

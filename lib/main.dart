@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:simple_pong/pong.dart';
 
 void main() {
   runApp(PongApp());
@@ -26,7 +27,7 @@ class HomePage extends StatelessWidget {
         title: Text('Simple Pong'),
       ),
       body: SafeArea(
-        child: Pong();
+        child: Pong(),
       ),
     );
   }
